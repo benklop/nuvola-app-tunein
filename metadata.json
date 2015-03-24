@@ -1,0 +1,12 @@
+{
+    "id": "tunein",
+    "name": "TuneIn",
+    "maintainer_name": "Aurélien Jabot",
+    "maintainer_link": "https://github.com/ajabot",
+    "version_major": 1,
+    "version_minor": 0,
+    "api_major": 3,
+    "api_minor": 0,
+    "categories": "AudioVideo;Audio;",
+    "home_url": "http://tunein.com/"
+}
