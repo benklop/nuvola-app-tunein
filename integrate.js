@@ -26,9 +26,12 @@
 
 (function(Nuvola)
 {
+var ART_DOMAIN = "http://cdn-albums.tunein.com/";
+var ART_EXTENSION = "t.jpg";
 
 // Create media player component
 var player = Nuvola.$object(Nuvola.MediaPlayer);
+var isConnected = false;
 
 // Handy aliases
 var PlaybackState = Nuvola.PlaybackState;
@@ -36,6 +39,11 @@ var PlayerAction = Nuvola.PlayerAction;
 
 // Create new WebApp prototype
 var WebApp = Nuvola.$WebApp();
+
+WebApp.getArtURL = function(key)
+{
+    return ART_DOMAIN + key + ART_EXTENSION;
+}
 
 // Initialization routines
 WebApp._onInitWebWorker = function(emitter)
@@ -69,15 +77,15 @@ WebApp.update = function()
         artLocation: null
     }
 
-    var tuner;
+    var app;
+    var broadcast;
 
     try
     {
         //getting the player element
-        tuner = document.getElementById("tuner"); 
-
+        app = TuneIn.app;
         //state management
-        switch(tuner.className)
+        switch(app.attributes.playState)
         {
             case "playing":
                 var state = PlaybackState.PLAYING;
@@ -96,38 +104,38 @@ WebApp.update = function()
         var state = PlaybackState.UNKNOWN;
     }
 
-    //getting track/radio information
-    var title = tuner.querySelector("div.line1").innerText;
+    try
+    {
+        broadcast = TuneIn.app.nowPlaying;
 
-    if (title.indexOf("-") > -1)
-    {
-        //the title is displayed using the "titel - artist" format
-        var aTitle = title.split('-');
-        track.title = aTitle[0];
-        track.artist = aTitle[1];
+        //getting track/radio information
+        track.title = broadcast.attributes.Title;
+        track.artist = broadcast.attributes.Artist;
+        track.album = broadcast.broadcast.Title;
+
+        if (broadcast.attributes.AlbumArt)
+        {
+            track.artLocation =  this.getArtURL(broadcast.attributes.AlbumArt);
+        }
+        else if(broadcast.attributes.ArtistArt)
+        {
+            track.artLocation = this.getArtURL(broadcast.attributes.ArtistArt);
+        }
+        else
+        {
+            track.artLocation = broadcast.broadcast.Logo;            
+        }
     }
-    else
+    catch(e)
     {
-        //if there is no title, the player just displays live
-        track.title = title;
-        track.artist = title;
+
     }
     
-    //for the album, we're using the radio name in the player
-    track.album = tuner.querySelector("div.line2").innerText;
-    
-    var logo = tuner.querySelector("div.artwork img.logo");
-    if(!!logo)
-    {
-        track.artLocation = tuner.querySelector("div.artwork img.logo").src;
-    }
-
     //updating nuvola's state
     player.setPlaybackState(state);
     player.setTrack(track);
     player.setCanPlay(state === PlaybackState.PAUSED);
     player.setCanPause(state === PlaybackState.PLAYING);
-
 
     // Schedule the next update
     setTimeout(this.update.bind(this), 500);
