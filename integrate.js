@@ -45,6 +45,48 @@ WebApp.getArtURL = function(key)
     return ART_DOMAIN + key + ART_EXTENSION;
 }
 
+WebApp.getPreviousElement = function()
+{
+    var favorites = document.getElementById("favoritePane");
+
+    for (var i = 0; i < favorites.childNodes.length; i++)
+    {
+        if (favorites.childNodes[i].getAttribute("data-stationid") == TuneIn.app.nowPlaying.broadcast.StationId)
+        {
+            if (i == 0)
+            {
+                return favorites.lastChild;
+            }
+            else
+            {
+                var pos = i - 1;
+                return favorites.childNodes[pos];
+            }
+        }
+    }
+}
+
+WebApp.getNextElement = function()
+{
+    var favorites = document.getElementById("favoritePane");
+
+    for (var i = 0; i < favorites.childNodes.length; i++)
+    {
+        if (favorites.childNodes[i].getAttribute("data-stationid") == TuneIn.app.nowPlaying.broadcast.StationId)
+        {
+            if (i == favorites.childNodes.length - 1)
+            {
+                return favorites.firstChild;
+            }
+            else
+            {
+                var pos = i + 1;
+                return favorites.childNodes[pos];
+            }
+        }
+    }
+}
+
 // Initialization routines
 WebApp._onInitWebWorker = function(emitter)
 {
@@ -79,11 +121,13 @@ WebApp.update = function()
 
     var app;
     var broadcast;
+    var favorites;
 
     try
     {
-        //getting the player element
+        //getting the javascript app
         app = TuneIn.app;
+
         //state management
         switch(app.attributes.playState)
         {
@@ -100,7 +144,7 @@ WebApp.update = function()
     }
     catch(e)
     {
-        // Always expect errors, e.g. document.getElementById("status") might be null
+        //Status unknown on errors
         var state = PlaybackState.UNKNOWN;
     }
 
@@ -128,14 +172,19 @@ WebApp.update = function()
     }
     catch(e)
     {
-
+        console.log(e.message)
     }
+    
+    
+    favorites = document.getElementById("favoritePane");
     
     //updating nuvola's state
     player.setPlaybackState(state);
     player.setTrack(track);
     player.setCanPlay(state === PlaybackState.PAUSED);
     player.setCanPause(state === PlaybackState.PLAYING);
+    player.setCanGoPrev(!!favorites);
+    player.setCanGoNext(!!favorites);
 
     // Schedule the next update
     setTimeout(this.update.bind(this), 500);
@@ -157,6 +206,14 @@ WebApp._onActionActivated = function(emitter, name, param)
         case PlayerAction.PAUSE:
         case PlayerAction.STOP:
             Nuvola.clickOnElement(tuner.querySelector("div.playbutton-cont div.icon"));
+            break;
+        case PlayerAction.PREV_SONG:
+            Nuvola.clickOnElement(this.getPreviousElement().querySelector("span._playTarget span.icon"));
+            Nuvola.clickOnElement(document.getElementById("userNav").querySelector("div.drawer a.my-profile"));
+            break;
+        case PlayerAction.NEXT_SONG:
+            Nuvola.clickOnElement(this.getNextElement().querySelector("span._playTarget span.icon"));
+            Nuvola.clickOnElement(document.getElementById("userNav").querySelector("div.drawer a.my-profile"));
             break;
     }
 }
