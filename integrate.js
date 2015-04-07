@@ -26,6 +26,8 @@
 
 (function(Nuvola)
 {
+var ART_DOMAIN = "http://cdn-albums.tunein.com/";
+var ART_EXTENSION = "t.jpg";
 
 // Create media player component
 var player = Nuvola.$object(Nuvola.MediaPlayer);
@@ -69,64 +71,91 @@ WebApp.update = function()
         artLocation: null
     }
 
-    var tuner;
+    var state, app, broadcast, favorites, displayPrevNextButtons;
 
+    //Status management
     try
     {
-        //getting the player element
-        tuner = document.getElementById("tuner"); 
+        //getting the javascript app
+        app = TuneIn.app;
 
         //state management
-        switch(tuner.className)
+        switch(app.attributes.playState)
         {
             case "playing":
-                var state = PlaybackState.PLAYING;
+                state = PlaybackState.PLAYING;
                 break;
             case "stopped":
-                var state = PlaybackState.PAUSED;
+                state = PlaybackState.PAUSED;
                 break;
             default:
-                var state = PlaybackState.UNKNOWN;
+                state = PlaybackState.UNKNOWN;
                 break;
         }
     }
     catch(e)
     {
-        // Always expect errors, e.g. document.getElementById("status") might be null
-        var state = PlaybackState.UNKNOWN;
+        //Status unknown on errors
+        state = PlaybackState.UNKNOWN;
+    }
+    finally
+    {
+        //Updating Nuvola's status
+        player.setPlaybackState(state);
+        
+        player.setCanPlay(state === PlaybackState.PAUSED);
+        player.setCanPause(state === PlaybackState.PLAYING);
     }
 
-    //getting track/radio information
-    var title = tuner.querySelector("div.line1").innerText;
+    //Track information management
+    try
+    {
+        broadcast = TuneIn.app.nowPlaying;
 
-    if (title.indexOf("-") > -1)
-    {
-        //the title is displayed using the "titel - artist" format
-        var aTitle = title.split('-');
-        track.title = aTitle[0];
-        track.artist = aTitle[1];
+        //getting track/radio information
+        track.title = broadcast.attributes.Title;
+        track.artist = broadcast.attributes.Artist;
+        track.album = broadcast.broadcast.Title;
+
+        if (broadcast.attributes.AlbumArt)
+        {
+            track.artLocation =  this.getArtURL(broadcast.attributes.AlbumArt);
+        }
+        else if (broadcast.attributes.ArtistArt)
+        {
+            track.artLocation = this.getArtURL(broadcast.attributes.ArtistArt);
+        }
+        else
+        {
+            //if we don't have album art, we take radio logo 
+            track.artLocation = broadcast.broadcast.Logo;            
+        }
     }
-    else
+    catch(e)
     {
-        //if there is no title, the player just displays live
-        track.title = title;
-        track.artist = title;
+        
+    }
+    finally
+    {
+        //updating track information
+        player.setTrack(track);
     }
     
-    //for the album, we're using the radio name in the player
-    track.album = tuner.querySelector("div.line2").innerText;
-    
-    var logo = tuner.querySelector("div.artwork img.logo");
-    if(!!logo)
+    //Prev/Next Management
+    try
     {
-        track.artLocation = tuner.querySelector("div.artwork img.logo").src;
+        favorites = document.getElementById("favoritePane");
+        //we display the next/previous buttons if the favorites list is visible and has more than one element
+        //and a station is playing and we have its ID
+        displayPrevNextButtons = favorites && TuneIn.app.nowPlaying.broadcast.StationId && favorites.childNodes.length > 1;
+        player.setCanGoPrev(displayPrevNextButtons);
+        player.setCanGoNext(displayPrevNextButtons); 
     }
-
-    //updating nuvola's state
-    player.setPlaybackState(state);
-    player.setTrack(track);
-    player.setCanPlay(state === PlaybackState.PAUSED);
-    player.setCanPause(state === PlaybackState.PLAYING);
+    catch(e)
+    {
+        player.setCanGoPrev(false);
+        player.setCanGoNext(false);
+    }
 
 
     // Schedule the next update
@@ -138,6 +167,7 @@ WebApp._onActionActivated = function(emitter, name, param)
 {
     //getting the player element
     var tuner = document.getElementById("tuner");
+    var userNav = document.getElementById("userNav");
 
     //managing nuvola's player's action
     switch (name)
@@ -150,7 +180,96 @@ WebApp._onActionActivated = function(emitter, name, param)
         case PlayerAction.STOP:
             Nuvola.clickOnElement(tuner.querySelector("div.playbutton-cont div.icon"));
             break;
+        case PlayerAction.PREV_SONG:
+            var previousElement = this.getPreviousElement();
+            if (previousElement)
+            {
+                Nuvola.clickOnElement(previousElement.querySelector("span._playTarget span.icon"));
+                Nuvola.clickOnElement(userNav.querySelector("div.drawer a.my-profile"));
+            } 
+            break;
+        case PlayerAction.NEXT_SONG:
+            var nextElement = this.getNextElement();
+            if (nextElement)
+            {
+                Nuvola.clickOnElement(nextElement.querySelector("span._playTarget span.icon"));
+                Nuvola.clickOnElement(userNav.querySelector("div.drawer a.my-profile"));
+            }
+            break;
     }
+}
+
+//Getting the art URL via the JS object
+WebApp.getArtURL = function(key)
+{
+    return ART_DOMAIN + key + ART_EXTENSION;
+}
+
+//returns the previous li element of the favorites list
+WebApp.getPreviousElement = function()
+{
+    try
+    {
+        var favorites = document.getElementById("favoritePane");
+        var stationId = TuneIn.app.nowPlaying.broadcast.StationId;
+
+        var position = this.getElementPosition(favorites.childNodes, stationId);
+
+        if (position == 0)
+        {
+            return favorites.lastChild;
+        }
+        else
+        {
+            position--;
+            return favorites.childNodes[position];
+        }
+    }
+    catch(e)
+    {
+        return null;
+    }
+}
+
+//returns the next li element of the favorites list
+WebApp.getNextElement = function()
+{
+    try
+    {
+        var favorites = document.getElementById("favoritePane");
+        var stationId = TuneIn.app.nowPlaying.broadcast.StationId;
+
+        var position = this.getElementPosition(favorites.childNodes, stationId);
+
+        if (position == favorites.childNodes.length - 1)
+        {
+            return favorites.firstChild;
+        }
+        else
+        {
+            position++;
+            return favorites.childNodes[position];
+        }
+    }
+    catch(e)
+    {
+        return null;
+    }
+}
+
+//gets the position of the current station in the favorites list
+WebApp.getElementPosition = function(favorites, stationId)
+{
+    for (var i = 0; i < favorites.length; i++)
+    {
+        if (favorites[i].getAttribute("data-stationid") == stationId)
+        {
+            return i;
+        }
+    }
+
+    //if we don't find the current station in the list, we throw an exception
+    throw "Station not found";
 }
 
 WebApp.start();
