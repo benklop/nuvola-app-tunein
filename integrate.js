@@ -127,12 +127,13 @@ WebApp.update = function()
         }
         else
         {
+            //if we don't have album art, we take radio logo 
             track.artLocation = broadcast.broadcast.Logo;            
         }
     }
     catch(e)
     {
-        console.log(e.message);
+        
     }
     finally
     {
@@ -155,6 +156,7 @@ WebApp.update = function()
         player.setCanGoPrev(false);
         player.setCanGoNext(false);
     }
+
 
     // Schedule the next update
     setTimeout(this.update.bind(this), 500);
@@ -251,7 +253,6 @@ WebApp.getNextElement = function()
     }
     catch(e)
     {
-        Nuvola.log(e.message);
         return null;
     }
 }
