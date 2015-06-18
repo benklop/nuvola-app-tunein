@@ -20,5 +20,9 @@ Installation
 Copyright
 ---------
 
-  - Copyright 2015 Aurélien JABOT <aurelien.jabot+nuvola@gmail.com>
+  - Copyright 2015 Aurélien JABOT <nuvola@ajabot.io>
   - License: [2-Clause BSD-license](./LICENSE)
+  File src/icon.svg
+  - Copyright 2011 Arturo Torres Sánchez <arturo.ilhuitemoc@gmail.com>
+  - Copyright 2011 Alexander King
+  - License: CC-BY-3.0
