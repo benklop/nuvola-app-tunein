@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Aurélien JABOT <aurelien.jabot+nuvola@gmail.com>
+ * Copyright 2015 Aurélien JABOT <nuvola@ajabot.io>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met: 
@@ -115,7 +115,7 @@ WebApp.update = function()
         //getting track/radio information
         track.title = broadcast.attributes.Title;
         track.artist = broadcast.attributes.Artist;
-        track.album = broadcast.broadcast.Title;
+        track.album = null;
 
         if (broadcast.attributes.AlbumArt)
         {
