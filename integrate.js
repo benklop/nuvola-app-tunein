@@ -2,14 +2,14 @@
  * Copyright 2015 Aurélien JABOT <nuvola@ajabot.io>
  *
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met: 
- * 
+ * modification, are permitted provided that the following conditions are met:
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer. 
+ *    list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution. 
- * 
+ *    and/or other materials provided with the distribution.
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -26,8 +26,6 @@
 
 (function(Nuvola)
 {
-var ART_DOMAIN = "http://cdn-albums.tunein.com/";
-var ART_EXTENSION = "t.jpg";
 
 // Create media player component
 var player = Nuvola.$object(Nuvola.MediaPlayer);
@@ -102,7 +100,7 @@ WebApp.update = function()
     {
         //Updating Nuvola's status
         player.setPlaybackState(state);
-        
+
         player.setCanPlay(state === PlaybackState.PAUSED);
         player.setCanPause(state === PlaybackState.PLAYING);
     }
@@ -110,37 +108,40 @@ WebApp.update = function()
     //Track information management
     try
     {
-        broadcast = TuneIn.app.nowPlaying;
+        broadcast = TuneIn.app.nowPlayingPoller;
 
         //getting track/radio information
-        track.title = broadcast.attributes.Title;
-        track.artist = broadcast.attributes.Artist;
+        track.title = broadcast.nowPlaying.Title;
+
+        if (track.title.indexOf(" - ") >= 0) {
+            var titleInfo = track.title.split(" - ");
+            track.title = titleInfo[1];
+            track.artist = titleInfo[0];
+        } else {
+            track.artist = broadcast.attributes.Artist;
+        }
         track.album = null;
 
-        if (broadcast.attributes.AlbumArt)
+        if (broadcast.nowPlaying.Image)
         {
-            track.artLocation =  this.getArtURL(broadcast.attributes.AlbumArt);
-        }
-        else if (broadcast.attributes.ArtistArt)
-        {
-            track.artLocation = this.getArtURL(broadcast.attributes.ArtistArt);
+            track.artLocation = broadcast.nowPlaying.Image;
         }
         else
         {
-            //if we don't have album art, we take radio logo 
-            track.artLocation = broadcast.broadcast.Logo;            
+            //if we don't have album art, we take radio logo
+            track.artLocation = broadcast.broadcast.EchoData.imageUrl;
         }
     }
     catch(e)
     {
-        
+
     }
     finally
     {
         //updating track information
         player.setTrack(track);
     }
-    
+
     //Prev/Next Management
     try
     {
@@ -149,7 +150,7 @@ WebApp.update = function()
         //and a station is playing and we have its ID
         displayPrevNextButtons = favorites && TuneIn.app.nowPlaying.broadcast.StationId && favorites.childNodes.length > 1;
         player.setCanGoPrev(displayPrevNextButtons);
-        player.setCanGoNext(displayPrevNextButtons); 
+        player.setCanGoNext(displayPrevNextButtons);
     }
     catch(e)
     {
@@ -186,7 +187,7 @@ WebApp._onActionActivated = function(emitter, name, param)
             {
                 Nuvola.clickOnElement(previousElement.querySelector("span._playTarget span.icon"));
                 Nuvola.clickOnElement(userNav.querySelector("div.drawer a.my-profile"));
-            } 
+            }
             break;
         case PlayerAction.NEXT_SONG:
             var nextElement = this.getNextElement();
@@ -197,12 +198,6 @@ WebApp._onActionActivated = function(emitter, name, param)
             }
             break;
     }
-}
-
-//Getting the art URL via the JS object
-WebApp.getArtURL = function(key)
-{
-    return ART_DOMAIN + key + ART_EXTENSION;
 }
 
 //returns the previous li element of the favorites list
