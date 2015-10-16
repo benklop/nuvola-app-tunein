@@ -148,7 +148,8 @@ WebApp.update = function()
         favorites = document.getElementById("favoritePane");
         //we display the next/previous buttons if the favorites list is visible and has more than one element
         //and a station is playing and we have its ID
-        displayPrevNextButtons = favorites && TuneIn.app.nowPlaying.broadcast.StationId && favorites.childNodes.length > 1;
+
+        displayPrevNextButtons = favorites && TuneIn.app.nowPlayingPoller.broadcast.StationId && favorites.childNodes.length > 1;
         player.setCanGoPrev(displayPrevNextButtons);
         player.setCanGoNext(displayPrevNextButtons);
     }
@@ -191,9 +192,10 @@ WebApp._onActionActivated = function(emitter, name, param)
             break;
         case PlayerAction.NEXT_SONG:
             var nextElement = this.getNextElement();
+
             if (nextElement)
             {
-                Nuvola.clickOnElement(nextElement.querySelector("span._playTarget span.icon"));
+                Nuvola.clickOnElement(nextElement.querySelector("span.play-button._playTarget span.icon"));
                 Nuvola.clickOnElement(userNav.querySelector("div.drawer a.my-profile"));
             }
             break;
@@ -206,7 +208,7 @@ WebApp.getPreviousElement = function()
     try
     {
         var favorites = document.getElementById("favoritePane");
-        var stationId = TuneIn.app.nowPlaying.broadcast.StationId;
+        var stationId = TuneIn.app.nowPlayingPoller.broadcast.StationId;
 
         var position = this.getElementPosition(favorites.childNodes, stationId);
 
@@ -232,7 +234,7 @@ WebApp.getNextElement = function()
     try
     {
         var favorites = document.getElementById("favoritePane");
-        var stationId = TuneIn.app.nowPlaying.broadcast.StationId;
+        var stationId = TuneIn.app.nowPlayingPoller.broadcast.StationId;
 
         var position = this.getElementPosition(favorites.childNodes, stationId);
 
