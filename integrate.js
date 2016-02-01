@@ -26,9 +26,6 @@
 
 (function(Nuvola)
 {
-var ART_DOMAIN = "http://cdn-albums.tunein.com/";
-var ART_EXTENSION = "t.jpg";
-
 // Create media player component
 var player = Nuvola.$object(Nuvola.MediaPlayer);
 
@@ -56,7 +53,10 @@ WebApp._onPageReady = function()
 {
     // Connect handler for signal ActionActivated
     Nuvola.actions.connect("ActionActivated", this);
-
+    
+    //subscribe to NowPlayingChanged events; If track information was updated, Events.Broadcast.NowPlayingUpdated happens
+    TuneIn.app.listenTo(TuneIn.events,Events.Broadcast.NowPlayingChanged, WebApp._onNowPlayingUpdated);
+    
     // Start update routine
     this.update();
 }
@@ -64,14 +64,12 @@ WebApp._onPageReady = function()
 // Extract data from the web page
 WebApp.update = function()
 {
-    var track = {
-        title: null,
-        artist: null,
-        album: null,
-        artLocation: null
-    }
-
-    var state, app, broadcast, favorites, displayPrevNextButtons;
+    //normally this gets run automatically when the stream metadata changes, however on some streams
+    //the metadata isn't ready yet, and reverts to default stream info. When this happens
+    //fetchNowPlaying doesn't get called any longer automatically.
+    app.nowPlayingPoller.fetchNowPlaying();
+    
+    var state, app, favorites, displayPrevNextButtons;
 
     //Status management
     try
@@ -106,40 +104,6 @@ WebApp.update = function()
         player.setCanPlay(state === PlaybackState.PAUSED);
         player.setCanPause(state === PlaybackState.PLAYING);
     }
-
-    //Track information management
-    try
-    {
-        broadcast = TuneIn.app.nowPlaying;
-
-        //getting track/radio information
-        track.title = broadcast.attributes.Title;
-        track.artist = broadcast.attributes.Artist;
-        track.album = null;
-
-        if (broadcast.attributes.AlbumArt)
-        {
-            track.artLocation =  this.getArtURL(broadcast.attributes.AlbumArt);
-        }
-        else if (broadcast.attributes.ArtistArt)
-        {
-            track.artLocation = this.getArtURL(broadcast.attributes.ArtistArt);
-        }
-        else
-        {
-            //if we don't have album art, we take radio logo 
-            track.artLocation = broadcast.broadcast.Logo;            
-        }
-    }
-    catch(e)
-    {
-        
-    }
-    finally
-    {
-        //updating track information
-        player.setTrack(track);
-    }
     
     //Prev/Next Management
     try
@@ -160,6 +124,52 @@ WebApp.update = function()
 
     // Schedule the next update
     setTimeout(this.update.bind(this), 500);
+}
+
+//listener for track updates
+WebApp._onNowPlayingUpdated = function(status)
+{
+    var track = {
+        title: null,
+        artist: null,
+        album: null,
+        artLocation: null
+    }
+    
+    try
+    {
+        //getting track/radio information
+        if(status.nowPlaying.Artist)
+        {
+            track.title = status.nowPlaying.Title;
+            track.artist = status.nowPlaying.Artist;
+            track.album = status.nowPlaying.Subtitle;
+        }
+        else if(status.nowPlaying.Title.indexOf('-') > -1)
+        {
+            var trackData = status.nowPlaying.Title.split('-').trim();
+            track.title = trackData[0];
+            track.artist = trackData[1];
+            track.album = status.nowPlaying.Subtitle;
+        }
+        else
+        {
+            track.title = status.nowPlaying.Title;
+            track.artist = null;
+            track.album = status.nowPlaying.Subtitle;
+        }
+        //the nowPlaying object contains the full URL of either the album art or, if none is available, the stream logo.
+        track.artLocation =  status.nowPlaying.Image;
+    }
+    catch(e)
+    {
+        
+    }
+    finally
+    {
+        //updating track information
+        player.setTrack(track);
+    }
 }
 
 // Handler of playback actions
@@ -197,12 +207,6 @@ WebApp._onActionActivated = function(emitter, name, param)
             }
             break;
     }
-}
-
-//Getting the art URL via the JS object
-WebApp.getArtURL = function(key)
-{
-    return ART_DOMAIN + key + ART_EXTENSION;
 }
 
 //returns the previous li element of the favorites list
