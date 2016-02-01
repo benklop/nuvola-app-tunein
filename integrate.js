@@ -67,7 +67,7 @@ WebApp.update = function()
     //normally this gets run automatically when the stream metadata changes, however on some streams
     //the metadata isn't ready yet, and reverts to default stream info. When this happens
     //fetchNowPlaying doesn't get called any longer automatically.
-    app.nowPlayingPoller.fetchNowPlaying();
+    TuneIn.app.nowPlayingPoller.fetchNowPlaying();
     
     var state, app, favorites, displayPrevNextButtons;
 
